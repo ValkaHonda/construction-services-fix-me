@@ -1,0 +1,42 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+.app-entry-background {
+  background-image: url('https://www.norbord.com/na/wp-content/uploads/2015/02/15-Tips-to-Being-a-Better-Builder.jpg');
+  background-position: 0 -500px;
+  background-color: #cccccc;
+  min-height: 1000px;
+  .login-register {
+    padding-top: 500px;
+  }
+}
+
+.form-applications {
+  background-image: url('https://www.norbord.com/na/wp-content/uploads/2015/02/15-Tips-to-Being-a-Better-Builder.jpg');
+  background-position: 0 -500px;
+  background-color: #cccccc;
+  min-height: 1000px;
+  padding-top: 10%;
+  .form-background {
+    background-color: whitesmoke;
+    .form {
+      margin-top: 30px;
+      margin-bottom: 30px;
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+  }
+}
