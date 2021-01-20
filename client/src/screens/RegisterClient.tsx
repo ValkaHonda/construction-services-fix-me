@@ -7,7 +7,6 @@ export const RegisterClient = (props: any) => {
 
   const handleSubmit = (e: any) => {
     e.preventDefault()
-    console.log({ formState })
     fetch('http://localhost:3008/api/auth/users', {
       method: 'POST',
       headers: {

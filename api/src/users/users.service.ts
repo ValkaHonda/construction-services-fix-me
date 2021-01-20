@@ -7,6 +7,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShowUserDTO } from './models/show-user.dto';
 import { Role } from 'src/entities/role.entity';
+import { Service } from 'src/entities/service.entity';
+import { ShowServiceDTO } from './models/show-sevice.dto';
+import { Company } from 'src/entities/company.entity';
+import { ServicePriceCompany } from 'src/entities/service-price-company.entity';
 
 @Injectable()
 export class UsersService {
@@ -15,6 +19,12 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
+    @InjectRepository(Service)
+    private readonly serviceRepository: Repository<Service>,
+    @InjectRepository(Company)
+    private readonly companyRepository: Repository<Company>,
+    @InjectRepository(ServicePriceCompany)
+    private readonly servicePriceCompanyRepository: Repository<ServicePriceCompany>,
   ) {}
 
   // One day we should move those "convert" methods in the ConverterService
@@ -32,10 +42,55 @@ export class UsersService {
     };
     return convertedUser;
   }
+
+  public async convertToShowServiceDTO(service: Service): Promise<ShowServiceDTO> {
+    
+    const convertedService: ShowServiceDTO = {
+      id: service.id,
+      name: service.name,
+    };
+    return convertedService;
+  }
   private async convertToShowUserDTOArray(users: User[]): Promise<ShowUserDTO[]> {
       return Promise.all(users.map(async (entity: User) => this.convertToShowUserDTO(entity)));
   }
 
+  private async convertToShowServiceDTOArray(retrievedServices: Service[]): Promise<ShowServiceDTO[]>{
+      return Promise.all(retrievedServices.map(async (entity: Service) => this.convertToShowServiceDTO(entity)));
+  }
+
+  async findAllServices() {
+    const retrievedServices = await  this.serviceRepository.find()
+    return this.convertToShowServiceDTOArray(retrievedServices) 
+  }
+
+  async createCompany(companyData: any, creator: User): Promise<{id: string}> {
+    const { priceByServiceIds, ...rest} = companyData
+
+    const foundServices: Service[] = await this.serviceRepository.findByIds(Object.keys(priceByServiceIds))
+    
+    const newCompany: Company = this.companyRepository.create({
+      name: rest.name,
+      address: rest.address,
+      description: rest.description,
+      // companyPrices: Promise.resolve(allServicePriceCompanies.filter(({ id }) => servicesPerCompanyCreated.some(service => service.id === id)))
+    })
+    newCompany.user = Promise.resolve(creator)
+
+    const savedCompany = await this.companyRepository.save(newCompany)
+
+
+    for(let i = 0; i < foundServices.length; i++) {
+      const result = this.servicePriceCompanyRepository.create({
+        price: priceByServiceIds[foundServices[i].id],
+        // services: Promise.resolve(foundServices[i])
+      })
+      result.services =  Promise.resolve(foundServices[i])
+      result.companies = Promise.resolve(savedCompany)
+      await this.servicePriceCompanyRepository.save(result)
+    }
+    return {id: savedCompany.id}
+  }
  
   async register(user: UserRegisterDTO): Promise<ShowUserDTO> {
     const newUser: User = this.usersRepository.create(user);

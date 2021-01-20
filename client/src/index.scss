@@ -40,3 +40,21 @@ code {
     }
   }
 }
+
+.custom-modal {
+  .custom-multi-select {
+    select {
+      &.form-control {
+        height: 80px;
+      }
+    }
+  }
+
+  .form-group {
+    .fileUploader {
+      .fileContainer {
+        height: 120px;
+      }
+    }
+  }
+}

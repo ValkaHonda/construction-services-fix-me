@@ -11,7 +11,6 @@ export const LoginClient = (props: any) => {
 
   const handleSubmit = (e: any) => {
     e.preventDefault()
-    console.log({ formState })
     fetch('http://localhost:3008/api/auth/session', {
       method: 'POST',
       headers: {

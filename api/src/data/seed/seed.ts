@@ -2,12 +2,62 @@ import { User } from "./../../entities/user.entity";
 import { createConnection, Equal, Not } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { Role } from "../../entities/role.entity";
+import { Service } from "../../entities/service.entity";
 
 const main = async () => {
   const connection = await createConnection();
 
   const userRepository = connection.manager.getRepository(User);
   const roleRepository = connection.manager.getRepository(Role);
+  const serviceRepository = connection.manager.getRepository(Service);
+
+  const service1: Service = await serviceRepository.findOne({
+    where: {
+      name: 'Боядисване'
+    }
+  })
+
+  if(!service1){
+    const newService: Service = new Service();
+    newService.name = 'Боядисване'
+    await serviceRepository.save(newService);
+    console.log("Created service1.");
+  } else {
+    console.log("service1 already in the DataBase");
+  }
+
+
+  const service2: Service = await serviceRepository.findOne({
+    where: {
+      name: 'Измазване'
+    }
+  })
+
+  if(!service2){
+    const newService: Service = new Service();
+    newService.name = 'Измазване'
+    await serviceRepository.save(newService);
+    console.log("Created service2.");
+  } else {
+    console.log("service2 already in the DataBase");
+  }
+
+
+
+  const service3: Service = await serviceRepository.findOne({
+    where: {
+      name: 'Сглобяване'
+    }
+  })
+
+  if(!service3){
+    const newService: Service = new Service();
+    newService.name = 'Сглобяване'
+    await serviceRepository.save(newService);
+    console.log("Created service3.");
+  } else {
+    console.log("service3 already in the DataBase");
+  }
 
   const member: Role = await roleRepository.findOne({
     where: {
@@ -70,7 +120,7 @@ const main = async () => {
 
   const valka2: User = await userRepository.findOne({
     where: {
-      email: "pingvin_8@mail.bg",
+      email: "valentin2805@gmail.com",
     },
   });
 
