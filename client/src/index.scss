@@ -58,3 +58,10 @@ code {
     }
   }
 }
+
+.hovered-company {
+  &:hover {
+    background: gold;
+    cursor: pointer;
+  }
+}

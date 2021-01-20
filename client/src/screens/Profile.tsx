@@ -6,14 +6,39 @@ import { getClientToken } from '../utils'
 export const Profile = () => {
   const [clientData, setClientData] = React.useState<any>({})
   const [openCreateCompanyModal, toggleOpenCreateCompanyModal] = React.useState(false)
+  const [fetching, setFetching] = React.useState(false)
+  const [receivedCompanies, setReceivedCompanies] = React.useState<any>([])
+  const [mounted, setMounted] = React.useState(false)
+
+  const toggleFetch = () => setFetching((prevState) => !prevState)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   React.useEffect(() => {
     const clientFromStorage = getClientToken()
     if (clientFromStorage) {
       setClientData(clientFromStorage)
-      console.log({ clientFromStorage })
     }
   }, [])
   const { user, token } = clientData
+  React.useEffect(() => {
+    mounted &&
+      fetch('http://localhost:3008/api/users/company', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          console.log({ resultFromServerCompanies: res })
+          setReceivedCompanies(res)
+        })
+        .catch((err) => console.log(err))
+  }, [fetching, mounted])
 
   if (!user) {
     return (
@@ -50,15 +75,23 @@ export const Profile = () => {
                     </ListGroupItem>
                   </ListGroup>
                   <Card.Body>
-                    <Card.Link href="#">Разгледай</Card.Link>
-                    <Card.Link href="#">Харесани</Card.Link>
-                    <Card.Link href="#">Твои</Card.Link>
+                    <Card.Link onClick={toggleFetch} href="#">
+                      Разгледай
+                    </Card.Link>
+                    <Card.Link onClick={toggleFetch} href="#">
+                      Харесани
+                    </Card.Link>
+                    <Card.Link onClick={toggleFetch} href="#">
+                      Твои
+                    </Card.Link>
                     <Card.Link onClick={() => toggleOpenCreateCompanyModal(true)} href="#">
                       Създай
                     </Card.Link>
                   </Card.Body>
                 </Card>
-                <div>Some additional info</div>
+                <div className="w-100">
+                  <RenderCompanies view="Всички компании" companies={receivedCompanies} />
+                </div>
               </div>
             </Col>
           </Row>
@@ -66,6 +99,59 @@ export const Profile = () => {
         <CreateCompanyModal token={token} show={openCreateCompanyModal} onHide={() => toggleOpenCreateCompanyModal(false)} />
       </div>
     </div>
+  )
+}
+
+const RenderCompanies = (props: any) => {
+  const [formState, setFormState] = React.useState<any>({})
+  const handleChange = (e: any) => {
+    if (e.target.name === '') {
+      return
+    }
+    setFormState((prevState: any) => ({ ...prevState, [e.target.name]: e.target.value }))
+  }
+  console.log({ formState2: formState })
+  const { companies = [] } = props
+
+  const filterBy = (property: string) => (company: any) => {
+    if (!formState[property]) {
+      return true
+    }
+    return company[property].toLowerCase().includes(formState[property].toLowerCase())
+  }
+
+  const filteredCompanies = companies.filter(filterBy('name')).filter(filterBy('address')).filter(filterBy('creator'))
+
+  return (
+    <Form onChange={handleChange}>
+      <h1 style={{ textAlign: 'center' }}>{props.view}</h1>
+      <div style={{ paddingLeft: '10px', paddingRight: '20px' }} className="d-flex justify-content-between">
+        <div>
+          <h4>Име</h4>
+          <Form.Control style={{ width: '80px' }} type="text" name="name" placeholder="Име" />
+        </div>
+        <div style={{ paddingLeft: '70px' }}>
+          <h4>Адрес</h4>
+          <Form.Control style={{ width: '80px' }} type="text" name="address" placeholder="Адрес" />
+        </div>
+        <div>
+          <h4 style={{ paddingLeft: '40px' }}>Собственик</h4>
+          <Form.Control style={{ width: '100px', marginLeft: '70px' }} type="text" name="creator" placeholder="username" />
+        </div>
+      </div>
+      <ListGroup style={{ maxHeight: '588px', overflow: 'scroll' }}>
+        {filteredCompanies &&
+          filteredCompanies.map((company: any) => (
+            <ListGroup.Item className="hovered-company" key={company.id}>
+              <div className="d-flex justify-content-between">
+                <div>{company.name}</div>
+                <div>{company.address}</div>
+                <div>{company.creator}</div>
+              </div>
+            </ListGroup.Item>
+          ))}
+      </ListGroup>
+    </Form>
   )
 }
 
@@ -130,10 +216,9 @@ const CreateCompanyModal = (props: any) => {
       .then((res) => {
         const { id } = res
         const formData = new FormData()
-        formData.append('files[]', pictures[0], pictures[0].name)
-        console.log({ firstPicture: pictures[0].name })
-
-        // formData.append('files[]', pictures[0][0], pictures[0][0].name)
+        for (const currentPicture of pictures) {
+          formData.append('files[]', currentPicture, currentPicture.name)
+        }
 
         fetch(`http://localhost:3008/api/users/company/images/${id}`, {
           method: 'POST',
@@ -143,7 +228,14 @@ const CreateCompanyModal = (props: any) => {
           body: formData,
         })
           .then((res) => res.json())
-          .then((res) => console.log({ lastRes: res }))
+          .then((res) => {
+            console.log({ lastRes: res })
+            setStage(0)
+            props.onHide()
+            setFormState({})
+            setPictures([])
+            setPriceByServiceIds({})
+          })
       })
       .catch((err) => console.log(err))
   }
@@ -233,7 +325,17 @@ const CreateCompanyModal = (props: any) => {
       <Modal.Footer>
         {stage === 0 && <Button onClick={() => setStage(1)}>Напред</Button>}
         {stage === 1 && <Button onClick={createCompany}>Създай Компания</Button>}
-        <Button onClick={props.onHide}>Затвори</Button>
+        <Button
+          onClick={() => {
+            props.onHide()
+            setStage(0)
+            setFormState({})
+            setPictures([])
+            setPriceByServiceIds({})
+          }}
+        >
+          Затвори
+        </Button>
       </Modal.Footer>
     </Modal>
   )

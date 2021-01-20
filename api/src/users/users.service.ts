@@ -11,6 +11,7 @@ import { Service } from 'src/entities/service.entity';
 import { ShowServiceDTO } from './models/show-sevice.dto';
 import { Company } from 'src/entities/company.entity';
 import { ServicePriceCompany } from 'src/entities/service-price-company.entity';
+import { Image } from 'src/entities/image.entity';
 
 @Injectable()
 export class UsersService {
@@ -25,6 +26,8 @@ export class UsersService {
     private readonly companyRepository: Repository<Company>,
     @InjectRepository(ServicePriceCompany)
     private readonly servicePriceCompanyRepository: Repository<ServicePriceCompany>,
+    @InjectRepository(Image)
+    private readonly imageRepository: Repository<Image>,
   ) {}
 
   // One day we should move those "convert" methods in the ConverterService
@@ -64,6 +67,30 @@ export class UsersService {
     return this.convertToShowServiceDTOArray(retrievedServices) 
   }
 
+  async getAllCompanies(): Promise<any> {
+    const foundCompanies: Company[] = await this.companyRepository.find()
+    const showCompaniesDTO: any = []
+    for (const currentCompany of foundCompanies) {
+      const companyPrices: ServicePriceCompany[] = await currentCompany.companyPrices
+      const servicesByPrice: any = []
+      for (const currentCompanyServicePrice of companyPrices) {
+        const currentPrice = currentCompanyServicePrice.price
+        const currentService = await currentCompanyServicePrice.services
+        const currentServiceName = currentService.name
+        servicesByPrice.push({service: currentServiceName, price: currentPrice})
+      }
+      showCompaniesDTO.push({
+        id: currentCompany.id,
+        name: currentCompany.name,
+        description: currentCompany.description,
+        services: servicesByPrice,
+        creator: (await currentCompany.user).username,
+        address: currentCompany.address
+      })
+    }
+    return showCompaniesDTO
+  }
+
   async createCompany(companyData: any, creator: User): Promise<{id: string}> {
     const { priceByServiceIds, ...rest} = companyData
 
@@ -90,6 +117,20 @@ export class UsersService {
       await this.servicePriceCompanyRepository.save(result)
     }
     return {id: savedCompany.id}
+  }
+
+  async attachImagesToCompany(companyId: string, images: any): Promise<void> {
+    const foundCompany = await this.companyRepository.findOne({ where: {
+      id: companyId,
+    }})
+
+    for (const currentImage of images) {
+      const newImage: Image = this.imageRepository.create({
+        url: `http://localhost:3008/public/${currentImage.filename}`
+      })
+      newImage.company = Promise.resolve(foundCompany)
+      await this.imageRepository.save(newImage)
+    }
   }
  
   async register(user: UserRegisterDTO): Promise<ShowUserDTO> {
