@@ -46,7 +46,7 @@ export class User {
   companies: Promise<Company[]>;
 
   @OneToMany(type => CommentEntity, comment => comment.user)
-  comments: Promise<Comment[]>;
+  comments: Promise<CommentEntity[]>;
 
   @ManyToMany(type => Company, company => company.likes)
   likedCompanies: Promise<Company[]>

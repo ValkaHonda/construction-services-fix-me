@@ -2,8 +2,8 @@ import React from 'react'
 import { Button, Col, Container, Row } from 'react-bootstrap'
 
 function App(props: any) {
-  const goToLogin = () => props.history.push('/login')
-  const goToRegister = () => props.history.push('/register')
+  const goToLogin = () => props.history.push('/login-client')
+  const goToRegister = () => props.history.push('/register-client')
 
   return (
     <div className="app-entry-background">

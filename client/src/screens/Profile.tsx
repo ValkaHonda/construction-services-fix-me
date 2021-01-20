@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, Card, Col, Container, Form, ListGroup, ListGroupItem, Modal, Row, Spinner } from 'react-bootstrap'
+import { Badge, Button, Card, Carousel, Col, Container, Form, ListGroup, ListGroupItem, Modal, Row, Spinner } from 'react-bootstrap'
 import ImageUploader from 'react-images-upload'
 import { getClientToken } from '../utils'
 
@@ -78,19 +78,19 @@ export const Profile = () => {
                     <Card.Link onClick={toggleFetch} href="#">
                       Разгледай
                     </Card.Link>
-                    <Card.Link onClick={toggleFetch} href="#">
+                    {/* <Card.Link onClick={toggleFetch} href="#">
                       Харесани
                     </Card.Link>
                     <Card.Link onClick={toggleFetch} href="#">
                       Твои
-                    </Card.Link>
+                    </Card.Link> */}
                     <Card.Link onClick={() => toggleOpenCreateCompanyModal(true)} href="#">
                       Създай
                     </Card.Link>
                   </Card.Body>
                 </Card>
                 <div className="w-100">
-                  <RenderCompanies view="Всички компании" companies={receivedCompanies} />
+                  <RenderCompanies token={token} view="Всички компании" companies={receivedCompanies} />
                 </div>
               </div>
             </Col>
@@ -104,13 +104,18 @@ export const Profile = () => {
 
 const RenderCompanies = (props: any) => {
   const [formState, setFormState] = React.useState<any>({})
+  const [selectedCompanyId, setSelectedCompanyId] = React.useState<any>({})
+
+  const onCompanyClick = (id: string) => () => {
+    setSelectedCompanyId(id)
+  }
+
   const handleChange = (e: any) => {
     if (e.target.name === '') {
       return
     }
     setFormState((prevState: any) => ({ ...prevState, [e.target.name]: e.target.value }))
   }
-  console.log({ formState2: formState })
   const { companies = [] } = props
 
   const filterBy = (property: string) => (company: any) => {
@@ -121,6 +126,8 @@ const RenderCompanies = (props: any) => {
   }
 
   const filteredCompanies = companies.filter(filterBy('name')).filter(filterBy('address')).filter(filterBy('creator'))
+
+  const selectedCompany = filteredCompanies.find((currentCompany: any) => currentCompany.id === selectedCompanyId)
 
   return (
     <Form onChange={handleChange}>
@@ -142,7 +149,7 @@ const RenderCompanies = (props: any) => {
       <ListGroup style={{ maxHeight: '588px', overflow: 'scroll' }}>
         {filteredCompanies &&
           filteredCompanies.map((company: any) => (
-            <ListGroup.Item className="hovered-company" key={company.id}>
+            <ListGroup.Item onClick={onCompanyClick(company.id)} className="hovered-company" key={company.id}>
               <div className="d-flex justify-content-between">
                 <div>{company.name}</div>
                 <div>{company.address}</div>
@@ -151,7 +158,184 @@ const RenderCompanies = (props: any) => {
             </ListGroup.Item>
           ))}
       </ListGroup>
+      <ViewCompanyModal token={props.token} selectedCompany={selectedCompany} onHide={() => setSelectedCompanyId('')} />
     </Form>
+  )
+}
+
+const ViewCompanyModal = (props: any) => {
+  const { selectedCompany = {}, ...rest } = props
+  const { name, images = [], services = [], description, address, phone, email } = selectedCompany
+  const [liked, setLiked] = React.useState(false)
+  const [totalLikes, setTotalLikes] = React.useState(0)
+  const [newCommentValue, setNewCommentValue] = React.useState('')
+  const [selectedCompanyComments, setSelectedCompanyComments] = React.useState<any>([])
+
+  React.useEffect(() => {
+    selectedCompany && selectedCompany.id && fetchComments()
+  }, [selectedCompany])
+
+  React.useEffect(() => {
+    selectedCompany &&
+      selectedCompany.id &&
+      fetch(`http://localhost:3008/api/users/company/like/${selectedCompany.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${props.token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((res) => {
+          setLiked(res.like)
+          setTotalLikes(res.totalLikes)
+        })
+        .catch((err) => console.log(err))
+  }, [selectedCompany])
+
+  const toggleLikeService = () => {
+    fetch(`http://localhost:3008/api/users/company/like/${selectedCompany.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${props.token}`,
+      },
+    })
+      .then((res) => res.json())
+      .catch((err) => console.log(err))
+  }
+
+  const fetchComments = () => {
+    fetch(`http://localhost:3008/api/users/company/comment/${selectedCompany.id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${props.token}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((res) => setSelectedCompanyComments(res))
+      .catch((err) => console.log(err))
+  }
+
+  const onSubmitComment = () => {
+    fetch(`http://localhost:3008/api/users/company/comment/${selectedCompany.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${props.token}`,
+      },
+      body: JSON.stringify({ content: newCommentValue }),
+    })
+      .then((res) => res.json())
+      .then((res: {}) => {
+        setSelectedCompanyComments([res, ...selectedCompanyComments])
+        console.log({ res })
+      })
+      .catch((err) => console.log(err))
+  }
+
+  return (
+    <Modal {...rest} show={!!props.selectedCompany} className="custom-modal" size="lg" aria-labelledby="contained-modal-title-vcenter" centered>
+      <Modal.Header closeButton>
+        <Modal.Title id="contained-modal-title-vcenter">{name}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div>
+          <Carousel>
+            {images.map((image: any) => (
+              <Carousel.Item key={image.id}>
+                <img className="d-block w-100" height="500px" src={image.url} alt="First slide" />
+                <Carousel.Caption>
+                  <h3>{description}</h3>
+                  <p>{address}</p>
+                </Carousel.Caption>
+              </Carousel.Item>
+            ))}
+          </Carousel>
+        </div>
+        <div className="my-3 d-flex justify-content-between">
+          <div>
+            <span>
+              <img height="15px" width="15px" src="https://cdn.onlinewebfonts.com/svg/img_501721.png" />
+            </span>
+            <span style={{ marginLeft: '5px', marginRight: '20px' }}>{email}</span>
+            <span>
+              <img height="15px" width="15px" src="https://www.clipartmax.com/png/middle/38-381602_png-file-svg-land-phone-icon-png.png" />
+            </span>
+            <span style={{ marginLeft: '5px' }}>{phone}</span>
+          </div>
+          <div className="d-flex">
+            {services.map((service: any) => (
+              <h5 style={{ marginRight: '10px' }} key={service.id}>
+                {service.name} <Badge variant="success">{service.price} лв.</Badge>
+              </h5>
+            ))}
+          </div>
+        </div>
+        <div className="d-flex justify-content-between">
+          {liked ? (
+            <Button
+              onClick={() => {
+                setLiked(false)
+                setTotalLikes((prevState) => prevState - 1)
+                toggleLikeService()
+              }}
+              variant="danger"
+            >
+              Спри да харесваш
+            </Button>
+          ) : (
+            <Button
+              onClick={() => {
+                setLiked(true)
+                setTotalLikes((prevState) => prevState + 1)
+                toggleLikeService()
+              }}
+              variant="success"
+            >
+              Харесай
+            </Button>
+          )}
+          <div>Общ брой харесвания: {totalLikes}</div>
+        </div>
+        <div className="d-flex">
+          <Form.Control value={newCommentValue} onChange={(e: any) => setNewCommentValue(e.target.value)} className="my-2" as="textarea" rows={1} placeholder="Оставете коментар" />
+          <Button onClick={onSubmitComment} className="ml-2 align-self-center" variant="secondary">
+            Коментирай
+          </Button>
+        </div>
+        <div className="d-flex flex-wrap">
+          {selectedCompanyComments.map((comment: any) => {
+            const givenDate = new Date(comment.dateCreated)
+            const year = givenDate.getFullYear()
+            const mes = givenDate.getMonth() + 1
+            const dia = givenDate.getDate()
+            const prettyDate = dia + '-' + mes + '-' + year
+            return (
+              <Card key={comment.dateCreated} style={{ width: '20rem', marginRight: '10px' }}>
+                <Card.Body>
+                  <Card.Title className="font-weight-bold">
+                    {comment.user} <img height="20px" width="20px" src={comment.userAvatarURL} />
+                  </Card.Title>
+                  <Card.Text>{comment.content}</Card.Text>
+                  <Card.Text>{prettyDate}</Card.Text>
+                </Card.Body>
+              </Card>
+            )
+          })}
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button
+          onClick={() => {
+            props.onHide()
+          }}
+        >
+          Затвори
+        </Button>
+      </Modal.Footer>
+    </Modal>
   )
 }
 

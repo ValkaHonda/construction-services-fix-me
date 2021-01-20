@@ -1,4 +1,4 @@
-import { CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Company } from "./company.entity";
 import { User } from "./user.entity";
 
@@ -10,6 +10,8 @@ export class CommentEntity {
   @CreateDateColumn()
   dateCreated: Date;
 
+  @Column('nvarchar')
+  content: string;
 
   @ManyToOne(type => User, user => user.comments)
   user: Promise<User>;

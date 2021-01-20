@@ -18,6 +18,12 @@ export class Company {
   @Column('nvarchar')
   description: string;
 
+  @Column('nvarchar')
+  phone: string;
+
+  @Column('nvarchar')
+  email: string;
+
   @OneToMany(type => ServicePriceCompany, servicePrice => servicePrice.services)
   companyPrices: Promise<ServicePriceCompany[]>;
 
@@ -25,11 +31,11 @@ export class Company {
   user: Promise<User>;
 
   @OneToMany(type => CommentEntity, comment => comment.company)
-  comments: Promise<Comment[]>;
+  comments: Promise<CommentEntity[]>;
 
   @ManyToMany(type => User, user => user.likedCompanies)
   @JoinTable()
-  likes: Promise<Company[]>
+  likes: Promise<User[]>
 
   @OneToMany(type => Image, image => image.company)
   images: Promise<Image[]>;

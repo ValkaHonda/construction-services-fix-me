@@ -48,6 +48,15 @@ export class UsersController {
         return this.userService.getAllCompanies()
     }
 
+    @Get('company/like/:companyId')
+    async checkForLike(
+      @SessionUser() user: User,
+      @Param('companyId') companyId: string,
+    ): Promise<any> {
+      return this.userService.checkForLike(companyId, user)
+    }
+
+
     @Post('company')
     async createCompany( @SessionUser() user: User,
     @Body() companyData: any
@@ -55,6 +64,21 @@ export class UsersController {
         return this.userService.createCompany(companyData, user);
     }
 
+
+    @Post('company/comment/:companyId')
+    async createComment( @SessionUser() user: User,
+      @Param('companyId') companyId: string,
+      @Body() commentData: any
+    ): Promise<any> { 
+        return this.userService.createComment(commentData, companyId, user);
+    }
+
+    @Get('company/comment/:companyId')
+    async getCommentsByCompanyId( 
+      @Param('companyId') companyId: string,
+    ): Promise<any> { 
+        return this.userService.getCommentsByCompanyId(companyId);
+    }
 
     @Post('company/images/:companyId')
     @UseInterceptors(FilesInterceptor('files[]',20, {
@@ -69,6 +93,14 @@ export class UsersController {
     ): Promise<{id: string}> { 
         await this.userService.attachImagesToCompany(companyId,files)
         return {id: companyId}
+    }
+
+    @Post('company/like/:companyId')
+    async toggleLike(
+      @SessionUser() user: User,
+      @Param('companyId') companyId: string,
+    ): Promise<any> {
+      return this.userService.toggleLike(companyId, user)
     }
 
     @Get('services')

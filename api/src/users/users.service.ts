@@ -12,6 +12,8 @@ import { ShowServiceDTO } from './models/show-sevice.dto';
 import { Company } from 'src/entities/company.entity';
 import { ServicePriceCompany } from 'src/entities/service-price-company.entity';
 import { Image } from 'src/entities/image.entity';
+import { CommentEntity } from 'src/entities/comment.entity';
+import { date } from 'joi';
 
 @Injectable()
 export class UsersService {
@@ -28,6 +30,8 @@ export class UsersService {
     private readonly servicePriceCompanyRepository: Repository<ServicePriceCompany>,
     @InjectRepository(Image)
     private readonly imageRepository: Repository<Image>,
+    @InjectRepository(CommentEntity)
+    private readonly commentRepository: Repository<CommentEntity>,
   ) {}
 
   // One day we should move those "convert" methods in the ConverterService
@@ -67,25 +71,112 @@ export class UsersService {
     return this.convertToShowServiceDTOArray(retrievedServices) 
   }
 
+  async checkForLike(companyId: string, user: User): Promise<any> {
+    const foundCompany = await this.companyRepository.findOne({ where: { id: companyId}})
+    const totalLikes = (await foundCompany.likes).length
+    if(!foundCompany) {
+      return ({ like: false, totalLikes})
+    }
+    const likes = await foundCompany.likes
+    
+    return ({ like: Boolean(likes.find((currentUser: User) => currentUser.id === user.id)), totalLikes})
+  }
+
+  async createComment(commentData: any, companyId: string, user: User): Promise<any> {
+    const foundUser = await this.usersRepository.findOne({ where: { id: user.id}})
+    const foundCompany = await this.companyRepository.findOne({ where: { id: companyId}}) 
+    const newComment: CommentEntity = this.commentRepository.create()
+    newComment.content = commentData.content
+    newComment.dateCreated = new Date()
+    newComment.company = Promise.resolve(foundCompany)
+    newComment.user = Promise.resolve(foundUser)
+    const savedComment = await this.commentRepository.save(newComment)
+    return {
+        dateCreated: savedComment.dateCreated,
+        user: (await savedComment.user).username,
+        content: savedComment.content,
+        userAvatarURL: (await savedComment.user).avatarURL
+    }
+  }
+
+  async getCommentsByCompanyId(companyId: string): Promise<any> {
+    const foundCompany = await this.companyRepository.findOne({ where: { id: companyId}}) 
+    const foundComments = await foundCompany.comments
+    const showCommentsDTO = []
+
+    for (const currentComment of foundComments) {
+      showCommentsDTO.push({
+        dateCreated: currentComment.dateCreated,
+        user: (await currentComment.user).username,
+        content: currentComment.content,
+        userAvatarURL: (await currentComment.user).avatarURL
+      })
+    }
+    return showCommentsDTO
+  }
+
+async toggleLike(companyId: string, user: User): Promise<any> {
+    const foundCompany = await this.companyRepository.findOne({ where: { id: companyId}})
+    const foundUser = await this.usersRepository.findOne({ where: { id: user.id}})
+    const foundLikeCompanies = await foundUser.likedCompanies || []
+    const alreadyLiked = foundLikeCompanies.some(company => company.id === companyId)
+    
+    if(!alreadyLiked) {
+      const foundLikers = await foundCompany.likes
+      foundLikers.push(foundUser)
+      foundCompany.likes = Promise.resolve(foundLikers)
+      await this.companyRepository.save(foundCompany)
+      
+      return ({ like: true})
+    }
+    const likes = await foundCompany.likes 
+    const fewerLikes = []
+
+    for (const currentLike of likes) {
+      if(currentLike.id !== user.id){
+        fewerLikes.push(currentLike)
+      }
+    }
+
+    foundCompany.likes = Promise.resolve(fewerLikes)
+    await this.companyRepository.save(foundCompany)
+    return ({ like: false})
+    
+  }
+
   async getAllCompanies(): Promise<any> {
     const foundCompanies: Company[] = await this.companyRepository.find()
     const showCompaniesDTO: any = []
     for (const currentCompany of foundCompanies) {
-      const companyPrices: ServicePriceCompany[] = await currentCompany.companyPrices
-      const servicesByPrice: any = []
-      for (const currentCompanyServicePrice of companyPrices) {
-        const currentPrice = currentCompanyServicePrice.price
-        const currentService = await currentCompanyServicePrice.services
-        const currentServiceName = currentService.name
-        servicesByPrice.push({service: currentServiceName, price: currentPrice})
+      const foundImages = await currentCompany.images
+
+      const companyPricesForServices = await this.servicePriceCompanyRepository.find()
+      
+      const companyServicesWithPriceDTO = []
+      for (const currentPriceForService of companyPricesForServices) {
+        const parentCompany = await currentPriceForService.companies
+
+        if(parentCompany.id === currentCompany.id){
+          const {price} = currentPriceForService
+          companyServicesWithPriceDTO.push({
+            price: price,
+            name: (await currentPriceForService.services).name,
+            id: (await currentPriceForService.services).id
+          })
+        }
+
       }
+      
       showCompaniesDTO.push({
         id: currentCompany.id,
         name: currentCompany.name,
         description: currentCompany.description,
-        services: servicesByPrice,
         creator: (await currentCompany.user).username,
-        address: currentCompany.address
+        address: currentCompany.address,
+        images: foundImages,
+        phone: currentCompany.phone,
+        email: currentCompany.email,
+        services: companyServicesWithPriceDTO
       })
     }
     return showCompaniesDTO
@@ -100,7 +191,8 @@ export class UsersService {
       name: rest.name,
       address: rest.address,
       description: rest.description,
-      // companyPrices: Promise.resolve(allServicePriceCompanies.filter(({ id }) => servicesPerCompanyCreated.some(service => service.id === id)))
+      phone: rest.phone,
+      email: rest.email,
     })
     newCompany.user = Promise.resolve(creator)
 
@@ -110,7 +202,6 @@ export class UsersService {
     for(let i = 0; i < foundServices.length; i++) {
       const result = this.servicePriceCompanyRepository.create({
         price: priceByServiceIds[foundServices[i].id],
-        // services: Promise.resolve(foundServices[i])
       })
       result.services =  Promise.resolve(foundServices[i])
       result.companies = Promise.resolve(savedCompany)
