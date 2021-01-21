@@ -65,3 +65,23 @@ code {
     cursor: pointer;
   }
 }
+
+.company-data-list {
+  .company-data-row {
+    display: flex;
+
+    .company-data-column {
+      &:first-child > span {
+        margin-right: auto;
+      }
+
+      &:last-child > span {
+        margin-left: auto;
+      }
+
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+  }
+}

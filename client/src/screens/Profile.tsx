@@ -96,7 +96,7 @@ export const Profile = () => {
             </Col>
           </Row>
         </Container>
-        <CreateCompanyModal token={token} show={openCreateCompanyModal} onHide={() => toggleOpenCreateCompanyModal(false)} />
+        <CreateCompanyModal onCompanyCreation={toggleFetch} token={token} show={openCreateCompanyModal} onHide={() => toggleOpenCreateCompanyModal(false)} />
       </div>
     </div>
   )
@@ -146,14 +146,18 @@ const RenderCompanies = (props: any) => {
           <Form.Control style={{ width: '100px', marginLeft: '70px' }} type="text" name="creator" placeholder="username" />
         </div>
       </div>
-      <ListGroup style={{ maxHeight: '588px', overflow: 'scroll' }}>
+      <ListGroup className="company-data-list" style={{ maxHeight: '588px', overflow: 'scroll' }}>
         {filteredCompanies &&
           filteredCompanies.map((company: any) => (
             <ListGroup.Item onClick={onCompanyClick(company.id)} className="hovered-company" key={company.id}>
-              <div className="d-flex justify-content-between">
-                <div>{company.name}</div>
-                <div>{company.address}</div>
-                <div>{company.creator}</div>
+              <div className="company-data-row">
+                <div className="company-data-column" style={{ justifyContent: 'left' }}>
+                  {company.name}
+                </div>
+                <div className="company-data-column center-item">{company.address}</div>
+                <div className="company-data-column" style={{ justifyContent: 'right' }}>
+                  {company.creator}
+                </div>
               </div>
             </ListGroup.Item>
           ))}
@@ -419,6 +423,7 @@ const CreateCompanyModal = (props: any) => {
             setFormState({})
             setPictures([])
             setPriceByServiceIds({})
+            props.onCompanyCreation()
           })
       })
       .catch((err) => console.log(err))
